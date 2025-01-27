@@ -72,6 +72,7 @@ setup(
     ],
     install_requires=[
         'dbus-python',
+        'lyricsgenius',
         'requests'
     ],
     extras_require={

@@ -5,6 +5,8 @@ from typing import List, Tuple
 from urllib.parse import quote
 from textwrap import wrap
 from lyrics import CACHE_PATH
+from lyrics.config import Config
+from lyricsgenius import Genius
 
 from subprocess import run
 import os
@@ -21,6 +23,9 @@ HEADER = {
 CLASS_NAME = r'\w{5,7} \w{4,5} \w{5,7}'  # dependent on User-Agent
 EDITOR = os.environ.get('EDITOR', 'nano')
 initial_text = b"Add lyrics here!"     # placeholder text for lyrics file
+
+config = Config('OPTIONS')
+genius_token = config['genius_token'] if 'genius_token' in config else None
 
 
 def query(track_name):
@@ -216,15 +221,16 @@ def get_lyrics(track_name: str, source: str = 'any', cache: bool = True) -> Tupl
         found_source = 'azlyrics' if lyrics_lines is not None else None
 
     if source == 'genius' or (source == 'any' and lyrics_lines is None):
-        gns_html = get_genius_html(html)
-        lyrics_lines = parse_genius(gns_html)
+        genius = Genius(genius_token)
+        song = genius.search_song(track_name)
+        lyrics_lines = song.lyrics if song is not None else None
         found_source = 'genius' if lyrics_lines is not None else None
 
     if lyrics_lines is None:
         return ['lyrics not found! :( for', source], source
 
     # TODO: replace all html entities with ASCII instead of just &amp;
-    text = map(lambda x: x.replace('&amp;', '&') + '\n', lyrics_lines)
+    text = lyrics_lines if found_source == 'genius' else map(lambda x: x.replace('&amp;', '&') + '\n', lyrics_lines)
 
     with open(filepath, 'w') as file:
         file.writelines(text)
